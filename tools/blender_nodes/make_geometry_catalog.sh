@@ -7,7 +7,7 @@ cd "$(dirname "$0")/../.."
 blender="${1:-${BLENDER:-blender}}"
 mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 supported="$(mktemp)"
-java -cp "target/classes:$(cat target/classpath.txt)" org.zeronura.engine.nodes.geometry.GeometryEvaluator "$supported"
+java -cp "target/classes:$(cat target/classpath.txt)" org.zeronura.nulzs.nodes.geometry.GeometryEvaluator "$supported"
 "$blender" --background --factory-startup --python tools/blender_nodes/make_geometry_catalog.py -- \
     --supported "$supported" --out src/main/resources/nodes/geometry_nodes.json
 rm -f "$supported"

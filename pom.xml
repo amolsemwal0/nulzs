@@ -190,7 +190,7 @@
                         <argument>--sun-misc-unsafe-memory-access=allow</argument>
                         <argument>-classpath</argument>
                         <classpath/>
-                        <argument>org.zeronura.engine.GameEngine</argument>
+                        <argument>org.zeronura.nulzs.GameEngine</argument>
                     </arguments>
                 </configuration>
             </plugin>

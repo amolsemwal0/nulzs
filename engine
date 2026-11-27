@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")"
 
-LAUNCHER=org.zeronura.engine.GameEngine
+LAUNCHER=org.zeronura.nulzs.GameEngine
 JAVA_OPTIONS="--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow"
 VERSION=$(sed -n 's:^    <version>\(.*\)</version>.*:\1:p' pom.xml | head -n 1)
 INSTALLED_ENGINE=$HOME/.m2/repository/org/zeronura/nulzs-game-engine/$VERSION/nulzs-game-engine-$VERSION.jar
@@ -142,7 +142,7 @@ case "$command" in
     new)
         if [ $# -lt 1 ]; then usage; exit 2; fi
         classpath=$(engine_classpath)
-        launch "$classpath" org.zeronura.engine.project.ProjectCreator "$@"
+        launch "$classpath" org.zeronura.nulzs.project.ProjectCreator "$@"
         ;;
     list)
         for file in projects/*/project.properties; do
@@ -166,7 +166,7 @@ case "$command" in
     rig)
         if [ $# -lt 1 ]; then usage; exit 2; fi
         classpath=$(engine_classpath)
-        launch "$classpath" org.zeronura.engine.rig2d.RigBuild "$@"
+        launch "$classpath" org.zeronura.nulzs.rig2d.RigBuild "$@"
         ;;
     screenshot)
         if [ $# -lt 2 ]; then usage; exit 2; fi

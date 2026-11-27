@@ -1,7 +1,7 @@
 """Exports Blender shader and geometry node trees as a node package the engine runs itself.
 
 A node package is one JSON file (plus the images it uses) holding everything the engine's node system
-(org.zeronura.engine.nodes) needs to rebuild a scene from its nodes rather than from baked meshes:
+(org.zeronura.nulzs.nodes) needs to rebuild a scene from its nodes rather than from baked meshes:
 
   * every node tree in use -- materials' shader trees, geometry-nodes modifiers and the groups they call --
     node by node, with each socket's value, every node's settings, colour ramps and sampled curves;
