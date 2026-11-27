@@ -44,7 +44,7 @@ class PointLightShaderTest {
     /** The function's statements, comments and blank lines left out, to its closing brace. */
     private static String function(String shader, String source) {
         List<String> body = new ArrayList<>();
-        int depth = 0;
+        long depth = 0;
         boolean inside = false;
         for (String line : source.split("\n")) {
             String trimmed = line.trim();
