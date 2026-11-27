@@ -135,6 +135,22 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The engine's UI faces, from the shared assets/Fonts, go into the jar as fonts/, so a game using the
+                 engine from anywhere draws in them (BitmapFont.FONT_RESOURCES). -->
+            <resource>
+                <directory>assets/Fonts</directory>
+                <targetPath>fonts</targetPath>
+                <includes>
+                    <include>Montserrat-*</include>
+                    <include>Grandstander-*</include>
+                    <include>DejaVu*</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -159,8 +175,9 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- `mvn compile exec:exec` opens the project hub / editor on projects/ in this folder, for working on the
-                 engine itself. Forked rather than exec:java so GLFW owns the process's main thread. -->
+            <!-- `mvn compile exec:exec` opens the project hub or the editor on projects/ in this folder with the
+                 engine as it is in the working tree (./engine is the usual way in). Forked rather than exec:java so
+                 GLFW owns the process's main thread. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>

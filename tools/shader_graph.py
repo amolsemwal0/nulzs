@@ -18,24 +18,11 @@ import json
 import math
 import os
 
+# The engine's folder. Projects' own tools import ROOT to find their folders (projects/<Name>/...).
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _engine_root():
-    """The engine's folder, whose src/main/resources/nodes holds the catalogs: the one this file is in when it is the
-    engine's, else $NULZS_ENGINE_HOME, else nulzs-game-engine beside this folder (a game's tools/ using the engine)."""
-    for folder in (ROOT, os.environ.get("NULZS_ENGINE_HOME", ""),
-                   os.path.join(os.path.dirname(ROOT), "nulzs-game-engine")):
-        if folder and os.path.isfile(os.path.join(folder, "src/main/resources/nodes/shader_nodes.json")):
-            return folder
-    raise SystemExit("shader_graph.py: can't find the engine's node catalogs; set NULZS_ENGINE_HOME to the "
-                     "nulzs-game-engine folder")
-
-
-ENGINE_ROOT = _engine_root()
-CATALOG = os.path.join(ENGINE_ROOT, "src/main/resources/nodes/shader_nodes.json")
+CATALOG = os.path.join(ROOT, "src/main/resources/nodes/shader_nodes.json")
 ENTRIES = {n["id"]: n for c in json.load(open(CATALOG))["categories"] for n in c["nodes"]}
-GEOMETRY_CATALOG = os.path.join(ENGINE_ROOT, "src/main/resources/nodes/geometry_nodes.json")
+GEOMETRY_CATALOG = os.path.join(ROOT, "src/main/resources/nodes/geometry_nodes.json")
 GEOMETRY_ENTRIES = {n["id"]: n for c in json.load(open(GEOMETRY_CATALOG))["categories"] for n in c["nodes"]}
 TAU = 2 * math.pi
 

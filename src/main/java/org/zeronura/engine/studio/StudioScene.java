@@ -160,8 +160,8 @@ final class StudioScene extends Scene {
         this.prefs = prefs;
         String gameClass = project.gameClass();
         String projectPackage = gameClass.contains(".") ? gameClass.substring(0, gameClass.lastIndexOf('.')) : "";
-        this.catalog = new ComponentCatalog(engineRoot.resolve("target/classes"), engineRoot.resolve("src/main/java"),
-                projectPackage);
+        this.catalog = new ComponentCatalog(project.classesDirectory().toAbsolutePath(),
+                project.sourceRoot().toAbsolutePath(), projectPackage);
         this.gameRunner = new ProcessRunner(console, "Game");
         this.buildRunner = new ProcessRunner(console, "Build");
     }
@@ -1135,7 +1135,8 @@ final class StudioScene extends Scene {
                 new Menu.Command("Full Build (Maven)", this::mavenBuild),
                 new Menu.Sub("Package for Players", () -> List.of(
                         new Menu.Command("Linux", () -> packageGame("linux")),
-                        new Menu.Command("Windows", () -> packageGame("windows")))));
+                        new Menu.Command("Windows", () -> packageGame("windows")),
+                        new Menu.Command("Android", () -> packageGame("android")))));
         debugMenu = List.of(
                 command("Run Game in Debug Mode", Key.F6, false, false, () -> runGameInDebugMode(null)),
                 command("Run This Scene in Debug Mode", Key.F6, true, false, this::runThisSceneInDebugMode)
@@ -2987,8 +2988,7 @@ final class StudioScene extends Scene {
                 debugVisible = true;
                 centerTab = DEBUG_TAB;
             }
-            command.addAll(List.of("-cp", System.getProperty("java.class.path"), "org.zeronura.engine.GameEngine",
-                    project.name()));
+            command.addAll(List.of("-cp", gameClasspath(), "org.zeronura.engine.GameEngine", project.name()));
             if (scene != null) {
                 command.add("--scene");
                 command.add(scene);
@@ -3080,12 +3080,26 @@ final class StudioScene extends Scene {
         return ProcessHandle.current().info().command().orElse("java");
     }
 
+    /** The editor's own classpath, with the open project's compiled classes on it if they aren't already. */
+    private String gameClasspath() {
+        String classpath = System.getProperty("java.class.path");
+        String classes = project.classesDirectory().toAbsolutePath().toString();
+        for (String entry : classpath.split(java.io.File.pathSeparator)) {
+            if (Path.of(entry).toAbsolutePath().normalize().equals(Path.of(classes).normalize())) {
+                return classpath;
+            }
+        }
+        return classes + java.io.File.pathSeparator + classpath;
+    }
+
     private void mavenBuild() {
         saveAll();
         showConsole();
-        console.info("Building everything with Maven...");
+        // A project with a build of its own is built in its folder; the engine it uses is the one installed.
+        Path folder = project.hasOwnBuild() ? project.directory().toAbsolutePath() : engineRoot;
+        console.info("Building " + (project.hasOwnBuild() ? project.name() : "everything") + " with Maven...");
         compiling = true;
-        buildRunner.start(List.of("mvn", "-q", "compile"), engineRoot, code -> mainThread.add(() -> {
+        buildRunner.start(List.of("mvn", "-q", "compile"), folder, code -> mainThread.add(() -> {
             compiling = false;
             if (code == 0) {
                 reloadScripts();
@@ -3096,17 +3110,22 @@ final class StudioScene extends Scene {
         }));
     }
 
+    /**
+     * Runs the project's own export script, {@code tools/export.sh <platform>} in its folder, which builds the game for
+     * players into the engine's {@code exports/<platform>/} ({@code android}, {@code linux} or {@code windows}).
+     */
     private void packageGame(String platform) {
-        Path script = engineRoot.resolve("tools/package.sh");
+        Path script = project.directory().resolve("tools/export.sh");
         if (!Files.isRegularFile(script)) {
-            status("tools/package.sh isn't there to package with", true);
+            status(project.name() + " has no tools/export.sh to build it for players with", true);
             return;
         }
         saveAll();
         showConsole();
-        console.info("Packaging " + project.name() + " for " + platform + " into dist/ ...");
-        buildRunner.start(List.of("sh", script.toString(), platform, project.name()), engineRoot,
-                code -> mainThread.add(() -> status(code == 0 ? "Packaged into dist/" : "Packaging failed - see the Console",
+        String exports = "exports/" + platform + "/";
+        console.info("Packaging " + project.name() + " for " + platform + " into " + exports + " ...");
+        buildRunner.start(List.of("bash", script.toAbsolutePath().toString(), platform), engineRoot,
+                code -> mainThread.add(() -> status(code == 0 ? "Packaged into " + exports : "Packaging failed - see the Console",
                         code != 0)));
     }
 
@@ -3299,9 +3318,11 @@ final class StudioScene extends Scene {
             // Its game class has to be compiled before it can run; the editor needs nothing more to open it.
             Thread thread = new Thread(() -> {
                 String packageDir = ProjectCreator.packageFor(name).replace('.', '/');
+                Path sources = made.sourceRoot().toAbsolutePath();
+                Path classes = made.classesDirectory().toAbsolutePath();
                 ScriptCompiler.Result result = ScriptCompiler.compile(
-                        ScriptCompiler.stale(catalog.sourceRoot().resolve(packageDir), catalog.sourceRoot(), catalog.classes()),
-                        catalog.sourceRoot(), catalog.classes(), System.getProperty("java.class.path"));
+                        ScriptCompiler.stale(sources.resolve(packageDir), sources, classes),
+                        sources, classes, System.getProperty("java.class.path"));
                 mainThread.add(() -> {
                     if (!result.ok()) {
                         console.error("Compiling the new project failed; build it with Build > Full Build (Maven)");

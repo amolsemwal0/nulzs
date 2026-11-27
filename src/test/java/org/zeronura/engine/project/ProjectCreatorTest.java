@@ -44,6 +44,31 @@ class ProjectCreatorTest {
     }
 
     @Test
+    void aProjectOfItsOwnKeepsItsBuildAndCodeInItsFolder() throws IOException {
+        ProjectInfo created = new ProjectCreator(temp.resolve("projects"), null).createBlank("SpaceRacer", "");
+        Path folder = temp.resolve("projects/SpaceRacer");
+
+        assertTrue(created.hasOwnBuild());
+        assertEquals(folder.resolve("src/main/java"), created.sourceRoot());
+        assertEquals(folder.resolve("target/classes"), created.classesDirectory());
+        assertTrue(Files.exists(folder.resolve("src/main/java/org/zeronura/games/spaceracer/SpaceRacerGame.java")));
+        assertTrue(Files.exists(folder.resolve("src/main/java/org/zeronura/games/spaceracer/MainScene.java")));
+        assertFalse(Files.exists(temp.resolve("src")), "nothing written outside the project's folder");
+        String pom = Files.readString(folder.resolve("pom.xml"));
+        assertTrue(pom.contains("<artifactId>nulzs-game-engine</artifactId>"), "the engine is its library");
+        assertTrue(pom.contains("<artifactId>spaceracer</artifactId>"));
+        assertTrue(pom.contains("<version>${nulzs.engine.version}</version>"));
+    }
+
+    @Test
+    void aProjectWithoutABuildOfItsOwnUsesTheWorkingFoldersCode() throws IOException {
+        ProjectInfo created = creator().createBlank("SpaceRacer", "");
+        assertFalse(created.hasOwnBuild());
+        assertEquals(Path.of("src", "main", "java"), created.sourceRoot());
+        assertEquals(Path.of("target", "classes"), created.classesDirectory());
+    }
+
+    @Test
     void badAndDuplicateNamesAreRejected() throws IOException {
         assertThrows(IllegalArgumentException.class, () -> creator().createBlank("lowercase", ""));
         assertThrows(IllegalArgumentException.class, () -> creator().createBlank("Has Space", ""));

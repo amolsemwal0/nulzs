@@ -12,8 +12,8 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Creates new blank projects: the project folder, its settings, and a starter {@code Game} and scene in the
- * source tree.
+ * Creates new blank projects: the project folder with its settings, its assets, its build ({@code pom.xml}, using the
+ * engine as a library) and a starter {@code Game} and scene in its own {@code src/main/java}.
  *
  * <p>A blank project is deliberately not a 2D or a 3D template. Its scene starts empty and every engine
  * feature is one call away from it, so the same starting point grows into a platformer, a card game, a
@@ -29,14 +29,24 @@ public final class ProjectCreator {
     private final Path projectsRoot;
     private final Path sourceRoot;
 
+    /**
+     * @param sourceRoot where every project's code goes, one shared source tree; null to give each project its own
+     *                   build and code in its folder
+     */
     public ProjectCreator(Path projectsRoot, Path sourceRoot) {
         this.projectsRoot = projectsRoot;
         this.sourceRoot = sourceRoot;
     }
 
-    /** A creator writing to {@code projects/} and {@code src/main/java/} under the working directory. */
+    /** A creator making self-contained projects in {@code projects/} under the working directory. */
     public static ProjectCreator forWorkingDirectory() {
-        return new ProjectCreator(Projects.DEFAULT_ROOT, Path.of("src", "main", "java"));
+        return new ProjectCreator(Projects.DEFAULT_ROOT, null);
+    }
+
+    /** The folder a project's package goes in. */
+    private Path sourceDirectory(Path projectDirectory, String packageName) {
+        Path root = sourceRoot != null ? sourceRoot : projectDirectory.resolve(Path.of("src", "main", "java"));
+        return root.resolve(packageName.replace('.', '/'));
     }
 
     /** Null if {@code name} is usable, otherwise why not. */
@@ -69,14 +79,14 @@ public final class ProjectCreator {
                     "a project called " + name + " already exists");
         }
         String packageName = packageFor(name);
-        Path sourceDirectory = sourceRoot.resolve(packageName.replace('.', '/'));
+        Path directory = projectsRoot.resolve(name);
+        Path sourceDirectory = sourceDirectory(directory, packageName);
         Path gameFile = sourceDirectory.resolve(name + "Game.java");
         Path sceneFile = sourceDirectory.resolve("MainScene.java");
         if (Files.exists(gameFile) || Files.exists(sceneFile)) {
             throw new FileAlreadyExistsException(sourceDirectory.toString(), null, "source for " + name + " already exists");
         }
 
-        Path directory = projectsRoot.resolve(name);
         ProjectInfo project = new ProjectInfo(name, directory, packageName + "." + name + "Game",
                 description == null ? "" : description, EngineConfig.DEFAULT_WIDTH, EngineConfig.DEFAULT_HEIGHT,
                 true, false);
@@ -87,10 +97,88 @@ public final class ProjectCreator {
                 Load them from a scene with assets(), e.g. assets().texture("player.png").
                 """);
 
+        if (sourceRoot == null) {
+            Files.writeString(directory.resolve("pom.xml"), pomSource(name));
+            Files.writeString(directory.resolve(".gitignore"), "target/\n");
+        }
         Files.createDirectories(sourceDirectory);
         Files.writeString(gameFile, gameSource(packageName, name));
         Files.writeString(sceneFile, sceneSource(packageName, name));
         return project;
+    }
+
+    /** The engine's version, as its jar records it; the version a new project's build asks for. */
+    static String engineVersion() {
+        try (var in = ProjectCreator.class.getResourceAsStream(
+                "/META-INF/maven/org.zeronura/nulzs-game-engine/pom.properties")) {
+            if (in != null) {
+                java.util.Properties properties = new java.util.Properties();
+                properties.load(in);
+                return properties.getProperty("version", DEFAULT_ENGINE_VERSION);
+            }
+        } catch (IOException ignored) {
+            // the default below
+        }
+        return DEFAULT_ENGINE_VERSION;
+    }
+
+    private static final String DEFAULT_ENGINE_VERSION = "1.0-SNAPSHOT";
+
+    /** A project's own build: its code against the engine, as a library, and its tests run from the engine's folder. */
+    static String pomSource(String name) {
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <project xmlns="http://maven.apache.org/POM/4.0.0"
+                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                    <modelVersion>4.0.0</modelVersion>
+
+                    <!-- %1$s, made with Nulzs Game Engine. Everything of the project's own is in this folder: its code
+                         (src/main/java), tests (src/test/java), project.properties and assets/. The engine is a library,
+                         installed from the engine's folder two levels up with `mvn install`. -->
+                    <groupId>org.zeronura.games</groupId>
+                    <artifactId>%2$s</artifactId>
+                    <version>1.0-SNAPSHOT</version>
+                    <name>%1$s</name>
+
+                    <properties>
+                        <maven.compiler.source>26</maven.compiler.source>
+                        <maven.compiler.target>26</maven.compiler.target>
+                        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                        <nulzs.engine.version>%3$s</nulzs.engine.version>
+                    </properties>
+
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.zeronura</groupId>
+                            <artifactId>nulzs-game-engine</artifactId>
+                            <version>${nulzs.engine.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter</artifactId>
+                            <version>5.11.4</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+
+                    <build>
+                        <plugins>
+                            <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-surefire-plugin</artifactId>
+                                <version>3.5.2</version>
+                                <configuration>
+                                    <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+                                    <!-- The game runs from the engine's folder (its paths start projects/%1$s/...), and
+                                         so do its tests. -->
+                                    <workingDirectory>${project.basedir}/../..</workingDirectory>
+                                </configuration>
+                            </plugin>
+                        </plugins>
+                    </build>
+                </project>
+                """.formatted(name, name.toLowerCase(Locale.ROOT), engineVersion());
     }
 
     /**
@@ -100,7 +188,7 @@ public final class ProjectCreator {
     public ProjectInfo createSceneProject(String name, String description) throws IOException {
         ProjectInfo project = createBlank(name, description);
         String packageName = packageFor(name);
-        Path sourceDirectory = sourceRoot.resolve(packageName.replace('.', '/'));
+        Path sourceDirectory = sourceDirectory(project.directory(), packageName);
         Files.writeString(sourceDirectory.resolve(name + "Game.java"), sceneGameSource(packageName, name));
         Files.deleteIfExists(sourceDirectory.resolve("MainScene.java"));
         Files.createDirectories(sourceDirectory.resolve("scripts"));
@@ -213,7 +301,7 @@ public final class ProjectCreator {
         String description = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
         try {
             ProjectInfo project = forWorkingDirectory().createBlank(name, description);
-            Path source = Path.of("src", "main", "java", packageFor(name).replace('.', '/'));
+            Path source = project.sourceRoot().resolve(packageFor(name).replace('.', '/'));
             System.out.println("Created blank project " + project.name());
             System.out.println("  settings: " + project.directory().resolve(ProjectInfo.FILE_NAME));
             System.out.println("  assets:   " + project.assetsDirectory());

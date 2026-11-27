@@ -5,22 +5,56 @@ games, first- and third-person games, and open worlds — from a single blank st
 
 Requires JDK 26 and Maven. Rendering is OpenGL 3.3 through LWJGL.
 
-This repository is the engine alone. Games live in their own folders and use the engine as a library.
+## The folder
 
-## Install
-
-```sh
-mvn install                # build, test, and put the engine in the local Maven repository (~/.m2)
-mvn install -DskipTests    # the same, without the tests
+```
+pom.xml, src/          the engine: built as a library, org.zeronura:nulzs-game-engine
+assets/                assets every project shares: the UI fonts, the Tree Tool's default pictures
+tools/                 the engine's tools (node catalogs from Blender, material baking, tree pictures, face shadows)
+engine                 the command-line tool
+exports/android/       builds of the games for players, one folder per system
+exports/linux/
+exports/windows/
+projects/<Name>/       the projects, each a folder of its own (not part of the repository)
+saves/                 settings and save games (not part of the repository)
 ```
 
-That installs `org.zeronura:nulzs-game-engine:1.0-SNAPSHOT`, with its sources for an IDE to show. It brings LWJGL
-(with the natives for the system it is built on), JOML and JNoise with it. Install again after changing the engine;
-games get the new version the next time they build.
+The repository is the engine alone. Git leaves out `projects/`, everything built into `exports/`, saves, bug reports,
+and the Steamworks SDK and Steam's libraries wherever they are (Valve's licence does not allow publishing them).
 
-## Using it in a game
+## Quick start
 
-A game's `pom.xml` names it as a dependency:
+```sh
+./engine                 # build and launch: the default project, else the editor (last project, or a new blank one)
+./engine editor MyGame   # open a project in the editor
+./engine new MyGame      # create a blank project
+./engine run MyGame      # build it and play it
+```
+
+| Command | What it does |
+|---|---|
+| `./engine run [Project]` | Build and launch a project (default project, else the editor on the last project edited, or on a new blank `MyGame`) |
+| `./engine editor [Project]` | Open a project in the editor (or the one last edited) |
+| `./engine hub` | Build every project and open the Project Hub |
+| `./engine new <Project> [description]` | Create a blank project in `projects/<Project>/` |
+| `./engine list` | List projects |
+| `./engine default <Project>` / `--clear` | Choose what launches when no project is named |
+| `./engine screenshot <Project> <file.png> [frame]` | Launch, save one frame, exit |
+| `./engine export <Project> <linux\|windows\|android>` | Build the game for players into `exports/<system>/`, with the project's `tools/export.sh` |
+| `./engine rig <folder\|file.psd>...` | Make 2.5D rigs (`.rig.json`) from layered `.psd` files |
+| `./engine test [Project\|--all]` | Run the engine's unit tests, a project's, or all of them |
+| `./engine install` | Install the engine in the local Maven repository now |
+
+Every project is built on the engine as a library, so `./engine` first installs the engine (`mvn install`) whenever
+its code changed since it last was. `mvn compile exec:exec` opens the hub or the editor too.
+
+The Project Hub lists every project, plays them, opens them in the editor, creates blank projects, and sets which
+one launches by default. Games started from the hub return to it with Esc.
+
+## Using the engine as a library
+
+`mvn install` (or `./engine install`) puts `org.zeronura:nulzs-game-engine:1.0-SNAPSHOT` in the local Maven repository,
+with its sources for an IDE to show. A game's `pom.xml` names it:
 
 ```xml
 <dependency>
@@ -30,16 +64,12 @@ A game's `pom.xml` names it as a dependency:
 </dependency>
 ```
 
-The engine works in the folder it is started in: that folder holds the projects (`projects/<Name>/`), their code
-(`src/main/java`, which the editor compiles and reloads itself), assets every project shares (`assets/`), the default
-project (`engine.properties`) and settings and saves (`saves/`). The layout of a project is under *Projects* below.
-Start the engine's launcher, `org.zeronura.engine.GameEngine`, from there:
+It brings LWJGL (with the natives for the system it is built on), JOML and JNoise with it. A game packaged for another
+system swaps in that system's LWJGL natives (classifier `natives-windows`, `natives-linux`, `natives-macos`,
+`natives-macos-arm64`) itself, as Crelmons' export does. The engine's UI faces are inside its jar, so a game run from
+any folder draws in them; `.ttf` files in the folder's `assets/Fonts/` replace them.
 
-```sh
-mvn compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-     -cp "target/classes:$(cat target/classpath.txt)" org.zeronura.engine.GameEngine [arguments]
-```
+The launcher is `org.zeronura.engine.GameEngine`, started in the folder that holds `projects/`:
 
 | Arguments | What starts |
 |---|---|
@@ -49,28 +79,22 @@ java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
 | `--editor [MyGame]` | The editor, on a project or the one last edited |
 | `--hub` | The Project Hub |
 
-Other entry points: `org.zeronura.engine.project.ProjectCreator <Project> [description]` creates a blank project,
-`org.zeronura.engine.rig2d.RigBuild <folder|file.psd>... [--force] [--preview DIR]` makes 2.5D rigs from layered
-`.psd` files, and `-Dengine.screenshot=<file.png> -Dengine.screenshotFrame=<n> -Dengine.exitAfterFrames=<n+1>` saves
-one frame of a project as a PNG and exits. A game folder usually wraps these in a small script (`./engine run`, ...).
-
-The engine's UI faces (Montserrat, Grandstander, DejaVu Sans Mono) are inside its jar; `.ttf` files in a game folder's
-`assets/Fonts/` replace them. The Tree Tool's default bark and leaf pictures are in `assets/tree/` here: copy them to a
-game folder's `assets/tree/` to start new trees with them.
+`-Dengine.screenshot=<file.png> -Dengine.screenshotFrame=<n> -Dengine.exitAfterFrames=<n+1>` saves one frame and exits.
 
 ## Working on the engine
 
 ```sh
-mvn test                   # the unit tests (STEAMWORKS_SDK=<the Steamworks SDK's sdk/ folder> also checks Steam's library)
-mvn compile exec:exec      # open the hub or the editor on projects/ in this folder (left out of git)
+./engine test              # the engine's unit tests (STEAMWORKS_SDK=<the Steamworks SDK's sdk/ folder> also checks
+                           # Steam's library)
+./engine test --all        # and every project's
 ```
 
-The Project Hub lists every project, plays them, opens them in the editor, creates blank projects, and sets which
-one launches by default. Games started from the hub return to it with Esc.
+The projects run on the engine as installed: `./engine` reinstalls it before building them whenever the engine
+changed.
 
 ## The editor
 
-`GameEngine --editor MyGame` (or **Edit** on the hub) opens a project in the engine's editor:
+`./engine editor MyGame` (or **Edit** on the hub) opens a project in the engine's editor:
 
 ```
  File  Edit  Create  Assets  View  Tools  Build  Options  Help                           [MyGame]
@@ -97,7 +121,7 @@ one launches by default. Games started from the hub return to it with Esc.
 | Console | Everything the editor, the compiler and a running game print, filtered by level; click a `File.java:12` line to open it there |
 
 **Scenes** are files in `projects/MyGame/assets/scenes/*.scene` (JSON). **Scripts** are the project's Java components;
-Assets > New Script writes one into `src/main/java/<package>/scripts/`, and saving a script compiles it inside the
+Assets > New Script writes one into the project's `src/main/java/<package>/scripts/`, and saving a script compiles it inside the
 editor (Ctrl+B any time) and loads the new version into the open scene straight away. **Play** (Ctrl+P) runs the scene in
 the viewport and puts it back as it was on Stop; **Run Game** (F5) compiles and starts the real game in its own window,
 and Ctrl+F5 starts it in the open scene. A new project made from the editor's File menu starts its first scene file:
@@ -211,14 +235,23 @@ In any game: **F3** stats overlay, **F11** fullscreen, **F12** screenshot to `sc
 
 ## Projects
 
+Each project is one folder holding everything of its own: its settings, its build, its code and tests, its assets,
+and whatever tools, notes and platform builds (an `android/` Gradle project, say) it has.
+
 ```
 projects/MyGame/
   project.properties        name, gameClass, window size (1920x1080 by default)
-  assets/                   images, sounds, models, levels
-src/main/java/org/zeronura/games/mygame/
-  MyGameGame.java           implements Game — puts the first scene on the stack
-  MainScene.java            your first scene, blank
+  pom.xml                   its build: the engine as a library; its tests run from the engine's folder
+  src/main/java/org/zeronura/games/mygame/
+    MyGameGame.java         implements Game — puts the first scene on the stack
+    MainScene.java          your first scene, blank
+  src/test/java/            its tests
+  assets/                   images, sounds, models, levels (searched before the engine's shared assets/)
+  tools/export.sh           optional: builds it for players, `export.sh linux|windows|android`, into exports/
 ```
+
+The game runs from the engine's folder, so paths in a game's code start there (`projects/MyGame/...`); assets are
+found by the paths under `assets/` (`assets().texture("player.png")`). Settings and saves go in `saves/`.
 
 A blank project is not a 2D or 3D template. Its scene starts empty and every engine feature switches on the
 first time you use it, so the same project can become any kind of game.

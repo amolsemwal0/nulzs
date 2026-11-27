@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Paints the default pictures for trees drawn in the map editor's Trees tab, into projects/Crelmons/assets/tex/tree/,
-or into another folder: the engine's own assets/tree/ holds a set every project's Tree Tool starts with.
+"""Paints the default pictures for trees drawn in the map editor's Trees tab, into the engine's shared assets/tree/ (the
+set every project's Tree Tool starts with), or into another folder, such as a project's own.
 
   leaf_cluster_albedo.png  a spray of leaves on transparent, painted in pale greys so the tree's leaf colour tints it
   bark_albedo.png          brown bark in a few flat tones, tiling both ways
   bark_normal.png          the same bark's relief
 
-    python3 tools/tree_textures.py [--out assets/tree]
+    python3 tools/tree_textures.py [--out projects/MyGame/assets/tex/tree]
 """
 import math
 import random
@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-OUT = Path(__file__).resolve().parent.parent / "projects/Crelmons/assets/tex/tree"
+OUT = Path(__file__).resolve().parent.parent / "assets/tree"
 SUPER = 4
 
 
@@ -104,7 +104,7 @@ def bark(size=1024, seed=11):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Paint the default tree pictures.")
-    parser.add_argument("--out", type=Path, default=OUT, help="folder to write into (default: Crelmons' tex/tree)")
+    parser.add_argument("--out", type=Path, default=OUT, help="folder to write into (default: the engine's assets/tree)")
     out = parser.parse_args().out
     out.mkdir(parents=True, exist_ok=True)
     leaf_cluster().save(out / "leaf_cluster_albedo.png")

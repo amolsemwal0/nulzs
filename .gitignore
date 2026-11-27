@@ -1,26 +1,49 @@
-target/
-*.iml
-*.iws
-*.ipr
-.idea/
-.vscode/
-.classpath
-.project
-.settings/
-.DS_Store
-__pycache__/
-*.pyc
+# Nulzs Game Engine. This repository is the engine alone.
 
-# Running the engine from this folder (mvn compile exec:exec) makes projects, saves and settings here; they are not
-# part of the engine.
-projects/
-saves/
+# Projects are not part of the engine: each is a folder of its own in projects/ (its code, tests, assets, tools and
+# notes), kept and shared on its own.
+/projects/
+
+# Exports: builds of the games, one folder per system (android, linux, windows). The folders are kept; nothing built
+# into them is.
+/exports/*/*
+!/exports/*/.gitkeep
+/exports/.cache/
+
+# The Steamworks SDK and Steam's libraries: Valve's licence does not allow publishing them, wherever they are put.
+SteamSDK/
+libsteam_api.so
+libsteam_api.dylib
+steam_api.dll
+steam_api64.dll
+steam_api.lib
+steam_api64.lib
+steam_appid.txt
+
+# Made by running games and the editor here
+/saves/
+/bug-reports/
+/screenshots/
 engine.properties
-screenshots/
-bug-reports/
+settings.txt
 hs_err_pid*.log
 replay_pid*.log
 core.*
 
-# Steamworks SDK (Valve's licence does not allow publishing it); the Steam test reads it from here or $STEAMWORKS_SDK
-SteamSDK/
+# Build output
+target/
+build/
+__pycache__/
+*.pyc
+
+# Editors and tools
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.DS_Store
+.claude/

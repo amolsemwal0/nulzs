@@ -5,20 +5,30 @@ import org.zeronura.engine.core.Game;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Properties;
 
 /**
- * A game project: a folder under {@code projects/} holding {@code project.properties} and the project's
- * {@code assets/}, plus the Java class that starts the game.
+ * A game project: a folder under {@code projects/} holding everything of the project's own — {@code project.properties},
+ * its {@code assets/}, and its code, a Maven project of its own that uses the engine as a library — plus the Java class
+ * that starts the game.
  *
  * <pre>
  * projects/MyGame/
  *   project.properties   name, gameClass, window settings
+ *   pom.xml              the project's build, depending on org.zeronura:nulzs-game-engine
+ *   src/main/java/       its code (the editor compiles its scripts here, into target/classes)
+ *   src/test/java/       its tests
  *   assets/              images, sounds, models, levels
  * </pre>
+ *
+ * <p>A project with no {@code pom.xml} of its own keeps its code in the working folder's {@code src/main/java}, as
+ * projects did before they had their own builds.
  *
  * @param gameClass fully-qualified name of the project's {@link Game} implementation
  */
@@ -93,6 +103,21 @@ public record ProjectInfo(
         return directory.resolve("assets");
     }
 
+    /** Whether the project is built on its own, from a {@code pom.xml} in its folder. */
+    public boolean hasOwnBuild() {
+        return Files.isRegularFile(directory.resolve("pom.xml"));
+    }
+
+    /** Where the project's Java code is: its own {@code src/main/java}, else the working folder's. */
+    public Path sourceRoot() {
+        return hasOwnBuild() ? directory.resolve(Path.of("src", "main", "java")) : Path.of("src", "main", "java");
+    }
+
+    /** Where the project's code is compiled to: its own {@code target/classes}, else the working folder's. */
+    public Path classesDirectory() {
+        return hasOwnBuild() ? directory.resolve(Path.of("target", "classes")) : Path.of("target", "classes");
+    }
+
     /**
      * Engine settings for running this project: its window, and its assets searched before the engine's. The asset
      * folders are absolute, so the image and model loaders — native code, which opens files from the process's own
@@ -108,9 +133,30 @@ public record ProjectInfo(
                 .withAssetRoots(List.of(assetsDirectory().toAbsolutePath(), Path.of("assets").toAbsolutePath()));
     }
 
-    /** Creates the project's game through its public no-argument constructor. */
+    /**
+     * Creates the project's game through its public no-argument constructor. The class is looked for on the classpath
+     * first, then in the project's compiled classes, so a project the launcher was not started with can still be played
+     * (from the hub, say) once it is compiled.
+     */
     public Game instantiate() throws ReflectiveOperationException {
-        Class<?> type = Class.forName(gameClass);
+        Class<?> type;
+        try {
+            type = Class.forName(gameClass);
+        } catch (ClassNotFoundException notOnClasspath) {
+            Path classes = classesDirectory().toAbsolutePath();
+            if (!Files.isDirectory(classes)) {
+                throw new ClassNotFoundException(gameClass + " is not compiled: no " + classes, notOnClasspath);
+            }
+            URL url;
+            try {
+                url = classes.toUri().toURL();
+            } catch (MalformedURLException e) {
+                throw new ClassNotFoundException(gameClass, e);
+            }
+            ClassLoader loader = new URLClassLoader(new URL[] {url}, ProjectInfo.class.getClassLoader());
+            Thread.currentThread().setContextClassLoader(loader);
+            type = Class.forName(gameClass, true, loader);
+        }
         if (!Game.class.isAssignableFrom(type)) {
             throw new ClassCastException(gameClass + " does not implement " + Game.class.getName());
         }

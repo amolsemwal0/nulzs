@@ -78,7 +78,8 @@ final class ScriptCompiler {
             Files.createDirectories(classes);
             List<String> options = List.of(
                     "-d", classes.toString(),
-                    "-cp", classpath,
+                    // The project's classes compiled before, which need not be on the editor's own classpath.
+                    "-cp", classes + java.io.File.pathSeparator + classpath,
                     "-sourcepath", sourceRoot.toString(),
                     "--release", Integer.toString(Runtime.version().feature()),
                     "-encoding", "UTF-8",

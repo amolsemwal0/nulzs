@@ -1,0 +1,217 @@
+#!/usr/bin/env sh
+# Nulzs Game Engine's command-line tool. Run from anywhere; it works in the folder it lives in, the engine's, where the
+# projects (projects/<Name>/) are found and the games run.
+set -e
+cd "$(dirname "$0")"
+
+LAUNCHER=org.zeronura.engine.GameEngine
+JAVA_OPTIONS="--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow"
+VERSION=$(sed -n 's:^    <version>\(.*\)</version>.*:\1:p' pom.xml | head -n 1)
+INSTALLED_ENGINE=$HOME/.m2/repository/org/zeronura/nulzs-game-engine/$VERSION/nulzs-game-engine-$VERSION.jar
+
+usage() {
+    cat <<'EOF'
+Usage: ./engine <command> [arguments]
+
+  run [Project]            build and launch a project (default project, else the editor on the last project edited)
+  editor [Project]         build and open the editor on a project (or the last one edited)
+  hub                      build every project and open the project hub
+  new <Project> [desc]     create a blank project: projects/<Project>, with its own code, build and assets
+  list                     list projects
+  default <Project>        launch <Project> when no project is named
+  default --clear          open the hub when no project is named
+  screenshot <Project> <file.png> [frame]
+                           launch, save one frame as a PNG, and exit
+  export <Project> <linux|windows|android>
+                           build the game for players into exports/<system>/ (the project's tools/export.sh)
+  rig <folder|file.psd>... [--force] [--preview DIR]
+                           make 2.5D rigs (.rig.json) from layered .psd files that have none
+                           (--force remakes them; --preview writes pose sheets as PNGs)
+  test [Project|--all]     run the engine's unit tests, a project's, or all of them
+  install                  install the engine in the local Maven repository now, changed or not
+
+Each project in projects/ is a Maven project of its own that uses the engine as a library; the engine is installed
+(mvn install) whenever its code changed since it last was, before anything is built on it.
+EOF
+}
+
+# The engine, installed in the local Maven repository where the projects' builds find it, if it changed since.
+install_engine() {
+    if [ "${1:-}" != --always ] && [ -f "$INSTALLED_ENGINE" ] \
+            && [ -z "$(find src/main assets/Fonts pom.xml -newer "$INSTALLED_ENGINE" -print -quit)" ]; then
+        return 0
+    fi
+    echo "Installing Nulzs Game Engine $VERSION..." >&2
+    mvn -q -DskipTests install >&2
+}
+
+# The engine on its own, compiled here: for the commands that run no project's code.
+engine_classpath() {
+    mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt >&2 || return 1
+    printf '%s' "target/classes:$(cat target/classpath.txt)"
+}
+
+# The folder of a project named by its name or its folder's, ignoring case; empty if there is none.
+project_dir() {
+    for file in projects/*/project.properties; do
+        [ -f "$file" ] || continue
+        dir=${file%/project.properties}
+        folder=${dir#projects/}
+        name=$(sed -n 's/^name=//p' "$file")
+        if [ "$(printf '%s' "$folder" | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" ] \
+                || [ "$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" ]; then
+            printf '%s' "$dir"
+            return 0
+        fi
+    done
+}
+
+# Compiles the given project folders (every project with a build, if none is given) in one Maven run, and prints the
+# classpath that runs them: each one's classes, then the engine and the libraries they use.
+build_projects() {
+    install_engine || return 1
+    dirs="$*"
+    if [ -z "$dirs" ]; then
+        for pom in projects/*/pom.xml; do
+            [ -f "$pom" ] && dirs="$dirs ${pom%/pom.xml}"
+        done
+    fi
+    if [ -z "$dirs" ]; then
+        engine_classpath
+        return 0
+    fi
+    # One Maven run for all of them: an aggregator listing them, made fresh each time.
+    mkdir -p target/projects
+    {
+        echo '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+        echo '<groupId>org.zeronura.games</groupId><artifactId>all-projects</artifactId><version>1</version>'
+        echo '<packaging>pom</packaging><modules>'
+        for dir in $dirs; do
+            echo "<module>../../$dir</module>"
+        done
+        echo '</modules></project>'
+    } > target/projects/pom.xml
+    mvn -q -f target/projects/pom.xml compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt >&2 \
+        || return 1
+    classpath=""
+    for dir in $dirs; do
+        classpath="$classpath:$dir/target/classes"
+    done
+    for dir in $dirs; do
+        classpath="$classpath:$(cat "$dir/target/classpath.txt")"
+    done
+    # Each library once, in the order first met.
+    printf '%s' "${classpath#:}" | tr ':' '\n' | awk 'NF && !seen[$0]++' | paste -sd ':' -
+}
+
+# The folder of the project named, or nothing if none is named; stops if the name matches none.
+named_project() {
+    [ -z "${1:-}" ] && return 0
+    dir=$(project_dir "$1")
+    if [ -z "$dir" ]; then
+        echo "No project named '$1' in projects/" >&2
+        exit 1
+    fi
+    printf '%s' "$dir"
+}
+
+launch() {
+    classpath=$1
+    shift
+    # shellcheck disable=SC2086
+    java $JAVA_OPTIONS -cp "$classpath" "$@"
+}
+
+command="${1:-run}"
+[ $# -gt 0 ] && shift
+
+case "$command" in
+    run)
+        dir=$(named_project "${1:-}")
+        classpath=$(build_projects $dir)
+        launch "$classpath" "$LAUNCHER" "$@"
+        ;;
+    hub)
+        classpath=$(build_projects)
+        launch "$classpath" "$LAUNCHER" --hub
+        ;;
+    editor|edit)
+        classpath=$(build_projects)
+        launch "$classpath" "$LAUNCHER" --editor "$@"
+        ;;
+    new)
+        if [ $# -lt 1 ]; then usage; exit 2; fi
+        classpath=$(engine_classpath)
+        launch "$classpath" org.zeronura.engine.project.ProjectCreator "$@"
+        ;;
+    list)
+        for file in projects/*/project.properties; do
+            [ -f "$file" ] || continue
+            name=$(sed -n 's/^name=//p' "$file")
+            description=$(sed -n 's/^description=//p' "$file")
+            printf '  %-16s %s\n' "$name" "$description"
+        done
+        ;;
+    default)
+        if [ "${1:-}" = "--clear" ]; then
+            rm -f engine.properties
+            echo "The hub will open when no project is named."
+        elif [ $# -eq 1 ] && [ -n "$(project_dir "$1")" ]; then
+            printf 'activeProject=%s\n' "$1" > engine.properties
+            echo "$1 will launch by default."
+        else
+            echo "No project named '${1:-}' in projects/"; exit 1
+        fi
+        ;;
+    rig)
+        if [ $# -lt 1 ]; then usage; exit 2; fi
+        classpath=$(engine_classpath)
+        launch "$classpath" org.zeronura.engine.rig2d.RigBuild "$@"
+        ;;
+    screenshot)
+        if [ $# -lt 2 ]; then usage; exit 2; fi
+        dir=$(named_project "$1")
+        frame="${3:-120}"
+        classpath=$(build_projects "$dir")
+        launch "$classpath" -Dengine.screenshot="$2" -Dengine.screenshotFrame="$frame" \
+               -Dengine.exitAfterFrames="$((frame + 1))" "$LAUNCHER" "$1"
+        ;;
+    export)
+        if [ $# -lt 2 ]; then usage; exit 2; fi
+        dir=$(named_project "$1")
+        case "$2" in linux|windows|android) ;; *) echo "Export for linux, windows or android"; exit 2 ;; esac
+        if [ ! -f "$dir/tools/export.sh" ]; then
+            echo "$1 has no tools/export.sh to build it for players with"; exit 1
+        fi
+        install_engine
+        bash "$dir/tools/export.sh" "$2"
+        ;;
+    test)
+        if [ "${1:-}" = "--all" ]; then
+            mvn -q test
+            install_engine
+            for pom in projects/*/pom.xml; do
+                [ -f "$pom" ] || continue
+                echo "Testing ${pom%/pom.xml}..."
+                mvn -q -f "$pom" test
+            done
+        elif [ -n "${1:-}" ]; then
+            dir=$(named_project "$1")
+            install_engine
+            mvn -q -f "$dir/pom.xml" test
+        else
+            mvn -q test
+        fi
+        ;;
+    install)
+        install_engine --always
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $command"
+        usage
+        exit 2
+        ;;
+esac
