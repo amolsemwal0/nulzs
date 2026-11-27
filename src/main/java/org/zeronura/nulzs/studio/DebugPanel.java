@@ -497,7 +497,7 @@ final class DebugPanel {
                     r.x() + 70f + NUMBER_COLUMN, Theme.SMALL_SCALE, Theme.TEXT);
             String method = (String) rows.get(i)[0];
             ui.textIn(ui.fit(method, r.width() - 70f - NUMBER_COLUMN - 24f, Theme.SMALL_SCALE), r, r.x() + 70f + NUMBER_COLUMN + 16f,
-                    Theme.SMALL_SCALE, method.startsWith("engine.") || method.startsWith("games.") ? Theme.TEXT_BRIGHT : Theme.TEXT);
+                    Theme.SMALL_SCALE, method.startsWith("nulzs.") || method.startsWith("games.") ? Theme.TEXT_BRIGHT : Theme.TEXT);
         }
         float ty = view.y() - scroll + (rows.size() + 1) * Theme.ROW;
         ui.text("Threads (samples of every thread)", view.x() + 8f, ty + 4f, Theme.SMALL_SCALE, Theme.TEXT_MUTED);

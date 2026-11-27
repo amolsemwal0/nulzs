@@ -42,8 +42,8 @@ class DebugReportTest {
                 row(DebugMode.SWAP, 1, frame - work, 0.1)));
         Map<String, Object> gl = new LinkedHashMap<>();
         gl.put("traced", true);
-        gl.put("sites", List.of(List.of("glDrawElements", "engine.A.draw", 100.0, 0.5),
-                List.of("glDrawElements", "engine.B.draw", 50.0, 0.25), List.of("glUniform1f", "engine.A.draw", 900.0, 0.1)));
+        gl.put("sites", List.of(List.of("glDrawElements", "nulzs.A.draw", 100.0, 0.5),
+                List.of("glDrawElements", "nulzs.B.draw", 50.0, 0.25), List.of("glUniform1f", "nulzs.A.draw", 900.0, 0.1)));
         out.put("gl", gl);
         return out;
     }

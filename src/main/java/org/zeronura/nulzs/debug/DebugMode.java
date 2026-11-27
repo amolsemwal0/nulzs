@@ -169,7 +169,7 @@ public final class DebugMode {
         active = null;
     }
 
-    /** "org.zeronura.nulzs.render.Renderer" as "engine.render.Renderer": the engine's and games' own, shorter. */
+    /** "org.zeronura.nulzs.render.Renderer" as "nulzs.render.Renderer": the engine's and games' own, shorter. */
     public static String shortName(String className) {
         return className.startsWith("org.zeronura.") ? className.substring("org.zeronura.".length()) : className;
     }

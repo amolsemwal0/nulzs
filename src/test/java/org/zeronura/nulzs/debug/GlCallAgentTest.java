@@ -92,13 +92,13 @@ class GlCallAgentTest {
         rewritten();
         int found = 0;
         for (int i = 0; i < GlCalls.sites(); i++) {
-            if ("engine.debug.GlCallFixture.draw".equals(GlCalls.caller(i))) {
+            if ("nulzs.debug.GlCallFixture.draw".equals(GlCalls.caller(i))) {
                 found++;
                 assertTrue(GlCalls.function(i).startsWith("gl"));
             }
         }
         assertEquals(3, found);
-        assertEquals(GlCalls.register("glDrawArrays", "engine.X.y"), GlCalls.register("glDrawArrays", "engine.X.y"));
+        assertEquals(GlCalls.register("glDrawArrays", "nulzs.X.y"), GlCalls.register("glDrawArrays", "nulzs.X.y"));
     }
 
     @Test
