@@ -19,7 +19,7 @@
       "rotation": [-0.104528, 0.0, 0.0, 0.994522],
       "scale": [1.0, 1.0, 1.0],
       "components": [
-        {"type": "org.zeronura.engine.graphics3d.CameraView3D", "enabled": true, "fields": {"fieldOfView": 60.0, "farPlane": 700.0}}
+        {"type": "org.zeronura.nulzs.graphics3d.CameraView3D", "enabled": true, "fields": {"fieldOfView": 60.0, "farPlane": 700.0}}
       ]
     },
     {
@@ -32,7 +32,7 @@
       "rotation": [0.0, 0.0, 0.0, 1.0],
       "scale": [1.0, 1.0, 1.0],
       "components": [
-        {"type": "org.zeronura.engine.graphics3d.Shape3D", "enabled": true, "fields": {"shape": "PLANE", "size": [20.0, 1.0, 20.0], "color": "#7D8590FF", "castShadows": true}}
+        {"type": "org.zeronura.nulzs.graphics3d.Shape3D", "enabled": true, "fields": {"shape": "PLANE", "size": [20.0, 1.0, 20.0], "color": "#7D8590FF", "castShadows": true}}
       ]
     },
     {
@@ -45,8 +45,8 @@
       "rotation": [0.0, 0.0, 0.0, 1.0],
       "scale": [1.0, 1.0, 1.0],
       "components": [
-        {"type": "org.zeronura.engine.graphics3d.Shape3D", "enabled": true, "fields": {"shape": "CUBE", "size": [1.0, 1.0, 1.0], "color": "#D0D4DCFF", "castShadows": true}},
-        {"type": "org.zeronura.engine.graphics3d.BoxCollider3D", "enabled": true, "fields": {"halfExtents": [0.5, 0.5, 0.5], "offset": [0.0, 0.0, 0.0]}}
+        {"type": "org.zeronura.nulzs.graphics3d.Shape3D", "enabled": true, "fields": {"shape": "CUBE", "size": [1.0, 1.0, 1.0], "color": "#D0D4DCFF", "castShadows": true}},
+        {"type": "org.zeronura.nulzs.graphics3d.BoxCollider3D", "enabled": true, "fields": {"halfExtents": [0.5, 0.5, 0.5], "offset": [0.0, 0.0, 0.0]}}
       ]
     }
   ]

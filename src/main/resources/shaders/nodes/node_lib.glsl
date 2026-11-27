@@ -1,5 +1,5 @@
 // --- Blender shader node library --------------------------------------------------------------------------
-// The GLSL half of org.zeronura.engine.nodes.tex: the same hashes, noise, Voronoi and colour maths, function for
+// The GLSL half of org.zeronura.nulzs.nodes.tex: the same hashes, noise, Voronoi and colour maths, function for
 // function, so a material and a geometry tree computing the same texture agree (and both agree with Blender, which
 // NodeFixture tests check on the Java side). Change one, change the other.
 //
@@ -253,7 +253,7 @@ float nb_ridged_multi_fractal(vec4 p, int dims, float detail, float roughness, f
     return value;
 }
 
-// type: 0 multifractal, 1 fBm, 2 hybrid, 3 ridged, 4 hetero terrain (as org.zeronura.engine.nodes.tex.Noise)
+// type: 0 multifractal, 1 fBm, 2 hybrid, 3 ridged, 4 hetero terrain (as org.zeronura.nulzs.nodes.tex.Noise)
 float nb_noise_select(vec4 p, int dims, float detail, float roughness, float lacunarity, float offset, float gain,
                       int type, bool normalize) {
     if (type == 0) return nb_multi_fractal(p, dims, detail, roughness, lacunarity);

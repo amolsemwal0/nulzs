@@ -12,4 +12,4 @@ material="$1"
 mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 set -- "$material" --size "${3:-1024}" ${2:+--out "$2"}
 java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
-    -cp "target/classes:$(cat target/classpath.txt)" org.zeronura.engine.nodes.render.NodeBaker "$@"
+    -cp "target/classes:$(cat target/classpath.txt)" org.zeronura.nulzs.nodes.render.NodeBaker "$@"

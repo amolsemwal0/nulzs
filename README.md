@@ -69,7 +69,7 @@ system swaps in that system's LWJGL natives (classifier `natives-windows`, `nati
 `natives-macos-arm64`) itself, as Crelmons' export does. The engine's UI faces are inside its jar, so a game run from
 any folder draws in them; `.ttf` files in the folder's `assets/Fonts/` replace them.
 
-The launcher is `org.zeronura.engine.GameEngine`, started in the folder that holds `projects/`:
+The launcher is `org.zeronura.nulzs.GameEngine`, started in the folder that holds `projects/`:
 
 | Arguments | What starts |
 |---|---|
@@ -456,7 +456,7 @@ SDK isn't in this repository (Valve's licence doesn't allow publishing it): a ga
 ## Layout
 
 ```
-org.zeronura.engine
+org.zeronura.nulzs
   core         Engine, Game, EngineConfig, Time, Scheduler, Assets, Screenshot
   scene        Scene, SceneManager, Entity, Component, Transform, PointerHandler; SceneFile, FileScene, Signal,
                ComponentFields (public fields as settings), SceneHost
