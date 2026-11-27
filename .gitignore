@@ -1,0 +1,26 @@
+target/
+*.iml
+*.iws
+*.ipr
+.idea/
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+__pycache__/
+*.pyc
+
+# Running the engine from this folder (mvn compile exec:exec) makes projects, saves and settings here; they are not
+# part of the engine.
+projects/
+saves/
+engine.properties
+screenshots/
+bug-reports/
+hs_err_pid*.log
+replay_pid*.log
+core.*
+
+# Steamworks SDK (Valve's licence does not allow publishing it); the Steam test reads it from here or $STEAMWORKS_SDK
+SteamSDK/
